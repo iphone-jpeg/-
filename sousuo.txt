@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>极简搜索 · 百度</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            color-scheme: light dark;
+            --bg-color: light-dark(#f8faff, #1a1a1a);
+            --text-color: light-dark(#1e293b, #e2e8f0);
+            --card-bg: light-dark(#ffffff, #242424);
+            --card-border: light-dark(#edf2f9, #333333);
+            --input-bg: light-dark(#ffffff, #2a2a2a);
+            --input-border: light-dark(#e2e9f2, #3a3a3a);
+            --btn-bg: light-dark(#e5edf8, #3a3a3a);
+            --btn-text: light-dark(#1f4062, #b0b0b0);
+            --badge-bg: light-dark(#f2f6fc, #2a2a2a);
+        }
+
+        body {
+            background: var(--bg-color);
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            color: var(--text-color);
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 0 1.5rem;
+            position: relative;
+            transition: background 0.5s ease;
+        }
+
+        body.custom-wallpaper {
+            background-color: transparent !important;
+        }
+
+        .brush-btn {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            color: var(--text-color);
+            transition: transform 0.2s, box-shadow 0.2s;
+            z-index: 100;
+            user-select: none;
+        }
+
+        .brush-btn:hover {
+            transform: scale(1.08);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+        }
+
+        .wallpaper-panel {
+            display: none;
+            position: fixed;
+            top: 5rem;
+            right: 1.5rem;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+            padding: 1.2rem;
+            z-index: 99;
+            min-width: 220px;
+            backdrop-filter: blur(12px);
+        }
+
+        .wallpaper-panel.active {
+            display: block;
+        }
+
+        .wallpaper-panel .title {
+            font-size: 0.8rem;
+            color: #7a8da5;
+            margin-bottom: 0.8rem;
+            letter-spacing: 0.5px;
+            text-align: center;
+        }
+
+        .wallpaper-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.6rem;
+        }
+
+        .wallpaper-item {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: transform 0.15s, border-color 0.2s;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .wallpaper-item:hover {
+            transform: scale(1.05);
+        }
+
+        .wallpaper-item.active {
+            border-color: #3b6b9e;
+            box-shadow: 0 0 0 2px rgba(59, 107, 158, 0.3);
+        }
+
+        .wp-default { background: #f8faff; border: 1px solid #e2e9f2; }
+        .wp-gray { background: #e0e0e0; }
+        .wp-star { background: linear-gradient(135deg, #0b1e33 0%, #2c3e50 100%); }
+        .wp-ocean { background: linear-gradient(135deg, #0077b6 0%, #90e0ef 100%); }
+        .wp-forest { background: linear-gradient(135deg, #2d6a4f 0%, #52b788 100%); }
+        .wp-aurora { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); }
+
+        .wallpaper-item.active::after {
+            content: "✓";
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            font-size: 12px;
+            color: #3b6b9e;
+            font-weight: bold;
+            background: white;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .search-container {
+            width: 100%;
+            max-width: 960px;
+            margin-top: 22vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.8rem;
+            animation: fadeUp 0.6s ease both;
+        }
+
+        @keyframes fadeUp {
+            0% { opacity: 0; transform: translateY(24px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .brand {
+            text-align: center;
+            user-select: none;
+        }
+
+        .brand h1 {
+            font-size: 3.4rem;
+            font-weight: 450;
+            letter-spacing: 6px;
+            color: #1a2b3e;
+            background: linear-gradient(145deg, #0f2b44, #2c4b6e);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            display: inline-block;
+            line-height: 1.2;
+        }
+
+        .search-box {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            background: var(--input-bg);
+            border-radius: 60px;
+            border: 1px solid var(--input-border);
+            transition: box-shadow 0.2s, border-color 0.2s;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.02);
+            padding: 0.2rem;
+            flex-wrap: nowrap;
+            gap: 0;
+        }
+
+        .search-box:focus-within {
+            border-color: #3b6b9e;
+            box-shadow: 0 8px 28px rgba(30, 64, 120, 0.08);
+            background: var(--input-bg);
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 0.8rem 1.2rem;
+            border: none;
+            background: transparent;
+            font-size: 1.05rem;
+            font-weight: 400;
+            color: var(--text-color);
+            outline: none;
+            min-width: 120px;
+            font-family: inherit;
+        }
+
+        .search-box input::placeholder {
+            color: #9aabbf;
+            font-weight: 300;
+            letter-spacing: 0.3px;
+        }
+
+        .search-box button {
+            background: transparent;
+            border: none;
+            padding: 0.4rem 0.8rem 0.4rem 0.4rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s;
+            border-radius: 60px;
+            color: #3b6b9e;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .search-box button:hover {
+            transform: scale(1.02);
+            color: #1f4a7a;
+        }
+
+        .search-box button:active {
+            transform: scale(0.96);
+        }
+
+        .search-btn-content {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-weight: 450;
+            font-size: 0.95rem;
+            background: var(--btn-bg);
+            padding: 0.4rem 1.2rem 0.4rem 1rem;
+            border-radius: 40px;
+            color: var(--btn-text);
+            transition: background 0.15s;
+            letter-spacing: 0.4px;
+        }
+
+        .search-box button:hover .search-btn-content {
+            background: var(--btn-bg);
+            filter: brightness(0.95);
+        }
+
+        .arrow-right {
+            display: inline-block;
+            font-size: 1.1rem;
+            line-height: 1;
+            margin-left: 0.1rem;
+        }
+
+        .engine-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.85rem;
+            color: #5f728b;
+            background: var(--badge-bg);
+            padding: 0.3rem 1.6rem 0.3rem 1.4rem;
+            border-radius: 60px;
+            border: 1px solid var(--card-border);
+            margin-top: -0.2rem;
+        }
+
+        .engine-badge span {
+            font-weight: 500;
+            color: #2b4b72;
+        }
+
+        .nav-section {
+            width: 100%;
+            margin-top: 0.6rem;
+            background: var(--card-bg);
+            border-radius: 2rem;
+            padding: 1.6rem 1.8rem 1.8rem;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+            transition: box-shadow 0.15s;
+            position: relative;
+        }
+
+        .nav-section:hover {
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+        }
+
+        .nav-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.2rem;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+        }
+
+        .nav-header h3 {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: var(--text-color);
+            letter-spacing: 0.5px;
+        }
+
+        .add-btn {
+            background: var(--btn-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 30px;
+            padding: 0.2rem 1.2rem;
+            font-size: 0.85rem;
+            color: var(--btn-text);
+            cursor: pointer;
+            transition: background 0.15s;
+            font-family: inherit;
+            font-weight: 500;
+        }
+
+        .add-btn:hover {
+            filter: brightness(0.95);
+        }
+
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.8rem;
+        }
+
+        @media (max-width: 900px) {
+            .nav-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+        @media (max-width: 600px) {
+            .nav-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 420px) {
+            .nav-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        .nav-item {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.6rem;
+            border-radius: 40px;
+            background: var(--btn-bg);
+            border: 1px solid var(--card-border);
+            transition: background 0.15s, border-color 0.15s, transform 0.1s;
+            text-decoration: none;
+            color: var(--text-color);
+            font-size: 0.85rem;
+            font-weight: 460;
+            cursor: pointer;
+            min-width: 0;
+        }
+
+        .nav-item:hover {
+            filter: brightness(0.95);
+            transform: translateY(-2px);
+        }
+
+        .nav-item .favicon {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            flex-shrink: 0;
+            object-fit: contain;
+            background: #fff;
+        }
+
+        .nav-item .label {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .context-menu {
+            display: none;
+            position: fixed;
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            padding: 0.4rem 0;
+            z-index: 1000;
+            min-width: 120px;
+            overflow: hidden;
+        }
+
+        .context-menu.active {
+            display: block;
+        }
+
+        .context-menu-item {
+            padding: 0.5rem 1.4rem;
+            font-size: 0.85rem;
+            color: var(--text-color);
+            cursor: pointer;
+            transition: background 0.1s;
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+            font-family: inherit;
+        }
+
+        .context-menu-item:hover {
+            background: var(--btn-bg);
+        }
+
+        .context-menu-item.danger {
+            color: #b91c1c;
+        }
+        .context-menu-item.danger:hover {
+            background: #fee2e2;
+        }
+
+        .signature {
+            position: fixed;
+            bottom: 1.8rem;
+            right: 2rem;
+            font-size: 0.8rem;
+            color: #7a8da5;
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(4px);
+            padding: 0.3rem 1.2rem 0.3rem 1rem;
+            border-radius: 60px;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
+            letter-spacing: 0.3px;
+            user-select: none;
+            transition: background 0.2s;
+        }
+
+        .signature:hover {
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        @media (max-width: 640px) {
+            .search-container { margin-top: 18vh; gap: 1.4rem; }
+            .brand h1 { font-size: 2.8rem; letter-spacing: 4px; }
+            .search-box { padding: 0.2rem; }
+            .search-box input { padding: 0.6rem 0.8rem; font-size: 0.95rem; min-width: 80px; }
+            .search-btn-content { padding: 0.3rem 0.8rem 0.3rem 0.6rem; font-size: 0.8rem; }
+            .nav-section { padding: 1.2rem 1rem; }
+            .signature { bottom: 1rem; right: 1rem; font-size: 0.7rem; padding: 0.2rem 0.8rem; }
+            .brush-btn { top: 1rem; right: 1rem; width: 38px; height: 38px; font-size: 1.1rem; }
+            .wallpaper-panel { top: 4rem; right: 1rem; }
+            .wallpaper-item { width: 44px; height: 44px; }
+        }
+        @media (max-width: 400px) {
+            body { padding: 0 0.6rem; }
+            .search-container { margin-top: 14vh; }
+            .brand h1 { font-size: 2.2rem; }
+            .nav-item { font-size: 0.75rem; padding: 0.3rem 0.4rem; }
+            .nav-item .favicon { width: 14px; height: 14px; }
+        }
+
+        ::selection { background: #c9ddf5; color: #0b1e33; }
+    </style>
+</head>
+<body>
+    <button class="brush-btn" id="brushBtn" title="更换壁纸">🖌️</button>
+
+    <div class="wallpaper-panel" id="wallpaperPanel">
+        <div class="title">选择背景</div>
+        <div class="wallpaper-grid">
+            <div class="wallpaper-item wp-default active" data-wallpaper="default" title="跟随系统"></div>
+            <div class="wallpaper-item wp-gray" data-wallpaper="gray" title="护眼灰"></div>
+            <div class="wallpaper-item wp-star" data-wallpaper="star" title="星空"></div>
+            <div class="wallpaper-item wp-ocean" data-wallpaper="ocean" title="海洋"></div>
+            <div class="wallpaper-item wp-forest" data-wallpaper="forest" title="森林"></div>
+            <div class="wallpaper-item wp-aurora" data-wallpaper="aurora" title="极光"></div>
+        </div>
+    </div>
+
+    <div class="search-container">
+        <div class="brand">
+            <h1>搜索</h1>
+        </div>
+
+        <form id="searchForm" action="https://www.baidu.com/s" method="get" target="_blank" style="width: 100%;">
+            <div class="search-box">
+                <input type="text" id="searchInput" name="wd" placeholder="输入关键词..." autofocus aria-label="搜索框" />
+                <button type="submit" aria-label="搜索">
+                    <span class="search-btn-content">开始 <span class="arrow-right">→</span></span>
+                </button>
+            </div>
+        </form>
+
+        <div class="engine-badge">
+            <span>引擎 · 百度</span>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-header">
+                <h3>常用导航</h3>
+                <button class="add-btn" id="addNavBtn">+ 添加</button>
+            </div>
+            <div class="nav-grid" id="navGrid">
+                <a href="https://www.baidu.com/" target="_blank" class="nav-item" data-label="百度首页">
+                    <img class="favicon" src="https://www.baidu.com/favicon.ico" alt="" onerror="this.style.display='none'" />
+                    <span class="label">百度首页</span>
+                </a>
+                <a href="https://news.baidu.com/" target="_blank" class="nav-item" data-label="百度新闻">
+                    <img class="favicon" src="https://news.baidu.com/favicon.ico" alt="" onerror="this.style.display='none'" />
+                    <span class="label">百度新闻</span>
+                </a>
+                <a href="https://image.baidu.com/" target="_blank" class="nav-item" data-label="图片搜索">
+                    <img class="favicon" src="https://image.baidu.com/favicon.ico" alt="" onerror="this.style.display='none'" />
+                    <span class="label">图片搜索</span>
+                </a>
+                <a href="https://map.baidu.com/" target="_blank" class="nav-item" data-label="百度地图">
+                    <img class="favicon" src="https://map.baidu.com/favicon.ico" alt="" onerror="this.style.display='none'" />
+                    <span class="label">百度地图</span>
+                </a>
+                <a href="https://www.bilibili.com/" target="_blank" class="nav-item" data-label="B站">
+                    <img class="favicon" src="https://www.bilibili.com/favicon.ico" alt="" onerror="this.style.display='none'" />
+                    <span class="label">B站</span>
+                </a>
+                <a href="https://www.zhihu.com/" target="_blank" class="nav-item" data-label="知乎">
+                    <img class="favicon" src="https://www.zhihu.com/favicon.ico" alt="" onerror="this.style.display='none'" />
+                    <span class="label">知乎</span>
+                </a>
+                <a href="https://www.github.com/" target="_blank" class="nav-item" data-label="GitHub">
+                    <img class="favicon" src="https://github.com/fluidicon.png" alt="" onerror="this.style.display='none'" />
+                    <span class="label">GitHub</span>
+                </a>
+            </div>
+        </div>
+
+        <div style="height: 0.8rem;"></div>
+    </div>
+
+    <div class="signature">
+        由B站"用户的system"制作，不喜勿喷
+    </div>
+
+    <div class="context-menu" id="contextMenu">
+        <button class="context-menu-item" id="editNavBtn">修改</button>
+        <button class="context-menu-item danger" id="deleteNavBtn">删除</button>
+    </div>
+
+    <script>
+        (function() {
+            const form = document.getElementById('searchForm');
+            const searchInput = document.getElementById('searchInput');
+
+            // 固定为百度，移除所有搜索引擎切换逻辑
+            form.action = 'https://www.baidu.com/s';
+            searchInput.name = 'wd';
+
+            // 表单提交空值校验
+            form.addEventListener('submit', function(e) {
+                const query = searchInput.value.trim();
+                if (query === '') {
+                    e.preventDefault();
+                    searchInput.focus();
+                    searchInput.style.border = '1px solid #d14545';
+                    setTimeout(() => { searchInput.style.border = 'none'; }, 800);
+                }
+            });
+
+            // 壁纸切换
+            const brushBtn = document.getElementById('brushBtn');
+            const wallpaperPanel = document.getElementById('wallpaperPanel');
+            const wallpaperItems = document.querySelectorAll('.wallpaper-item');
+
+            const wallpaperMap = {
+                'default': 'var(--bg-color)',
+                'gray': '#e0e0e0',
+                'star': 'linear-gradient(135deg, #0b1e33 0%, #2c3e50 100%)',
+                'ocean': 'linear-gradient(135deg, #0077b6 0%, #90e0ef 100%)',
+                'forest': 'linear-gradient(135deg, #2d6a4f 0%, #52b788 100%)',
+                'aurora': 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)'
+            };
+
+            let currentWallpaper = localStorage.getItem('myWallpaper') || 'default';
+
+            function applyWallpaper(key) {
+                const bg = wallpaperMap[key];
+                if (!bg) return;
+
+                const body = document.body;
+                if (key === 'default') {
+                    body.classList.remove('custom-wallpaper');
+                    body.style.background = '';
+                    body.style.backgroundImage = '';
+                } else {
+                    body.classList.add('custom-wallpaper');
+                    body.style.background = bg;
+                    body.style.backgroundSize = 'cover';
+                    body.style.backgroundPosition = 'center';
+                    body.style.backgroundRepeat = 'no-repeat';
+                    body.style.backgroundAttachment = 'fixed';
+                }
+
+                wallpaperItems.forEach(el => el.classList.remove('active'));
+                const target = document.querySelector('.wallpaper-item[data-wallpaper="' + key + '"]');
+                if (target) target.classList.add('active');
+
+                localStorage.setItem('myWallpaper', key);
+                currentWallpaper = key;
+            }
+
+            brushBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                wallpaperPanel.classList.toggle('active');
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!wallpaperPanel.contains(e.target) && e.target !== brushBtn) {
+                    wallpaperPanel.classList.remove('active');
+                }
+            });
+
+            wallpaperItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const key = this.getAttribute('data-wallpaper');
+                    applyWallpaper(key);
+                    wallpaperPanel.classList.remove('active');
+                });
+            });
+
+            applyWallpaper(currentWallpaper);
+
+            // 导航管理 (右键修改/删除 + 添加)
+            const navGrid = document.getElementById('navGrid');
+            const contextMenu = document.getElementById('contextMenu');
+            const editBtn = document.getElementById('editNavBtn');
+            const deleteBtn = document.getElementById('deleteNavBtn');
+            const addBtn = document.getElementById('addNavBtn');
+
+            let currentTarget = null;
+
+            function hideContextMenu() {
+                contextMenu.classList.remove('active');
+                currentTarget = null;
+            }
+
+            function showContextMenu(e, target) {
+                e.preventDefault();
+                currentTarget = target;
+                contextMenu.style.left = Math.min(e.clientX, window.innerWidth - 140) + 'px';
+                contextMenu.style.top = Math.min(e.clientY, window.innerHeight - 80) + 'px';
+                contextMenu.classList.add('active');
+            }
+
+            function attachContextMenu(el) {
+                el.addEventListener('contextmenu', function(e) {
+                    showContextMenu(e, el);
+                });
+            }
+
+            document.querySelectorAll('.nav-item').forEach(attachContextMenu);
+
+            document.addEventListener('click', function(e) {
+                if (!contextMenu.contains(e.target)) {
+                    hideContextMenu();
+                }
+            });
+
+            editBtn.addEventListener('click', function() {
+                if (!currentTarget) return;
+                const currentLabel = currentTarget.getAttribute('data-label') || currentTarget.querySelector('.label')?.textContent || '未命名';
+                const currentHref = currentTarget.href || '';
+                const newLabel = prompt('请输入新的导航名称：', currentLabel);
+                if (newLabel === null) { hideContextMenu(); return; }
+                const newHref = prompt('请输入新的网址 (以 http:// 或 https:// 开头)：', currentHref);
+                if (newHref === null) { hideContextMenu(); return; }
+                if (newLabel.trim() !== '' && newHref.trim() !== '') {
+                    const labelEl = currentTarget.querySelector('.label');
+                    if (labelEl) labelEl.textContent = newLabel.trim();
+                    currentTarget.setAttribute('data-label', newLabel.trim());
+                    currentTarget.href = newHref.trim();
+                    const img = currentTarget.querySelector('.favicon');
+                    if (img) {
+                        try {
+                            const domain = new URL(newHref.trim()).origin;
+                            img.src = domain + '/favicon.ico';
+                            img.style.display = 'block';
+                            img.onerror = function() { this.style.display = 'none'; };
+                        } catch(e) {
+                            img.style.display = 'none';
+                        }
+                    }
+                }
+                hideContextMenu();
+            });
+
+            deleteBtn.addEventListener('click', function() {
+                if (!currentTarget) return;
+                if (confirm('确定要删除这个导航项吗？')) {
+                    currentTarget.remove();
+                }
+                hideContextMenu();
+            });
+
+            addBtn.addEventListener('click', function() {
+                const label = prompt('请输入导航名称：');
+                if (label === null || label.trim() === '') return;
+                const url = prompt('请输入网址 (以 http:// 或 https:// 开头)：');
+                if (url === null || url.trim() === '') return;
+                if (!url.trim().startsWith('http://') && !url.trim().startsWith('https://')) {
+                    alert('请输入有效的网址，需以 http:// 或 https:// 开头');
+                    return;
+                }
+                const newItem = document.createElement('a');
+                newItem.className = 'nav-item';
+                newItem.href = url.trim();
+                newItem.target = '_blank';
+                newItem.setAttribute('data-label', label.trim());
+                let domain = '';
+                try {
+                    domain = new URL(url.trim()).origin;
+                } catch(e) {
+                    domain = '';
+                }
+                newItem.innerHTML = '<img class="favicon" src="' + (domain ? domain + '/favicon.ico' : '') + '" alt="" onerror="this.style.display=\'none\'" /><span class="label">' + label.trim() + '</span>';
+                navGrid.appendChild(newItem);
+                attachContextMenu(newItem);
+            });
+
+            console.log('极简搜索 · 百度专用 (可定制导航/壁纸)');
+        })();
+    </script>
+</body>
+</html>
